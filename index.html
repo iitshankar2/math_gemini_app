@@ -3,216 +3,251 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Olympiad Practice - JSON Store</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <title>MOEMS Math Olympiad Practice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- KaTeX for rendering LaTeX math -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+    <style>
+        .katex-display { margin: 0.5em 0; }
+    </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col items-center justify-center p-4">
-    <div class="max-w-2xl w-full bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-slate-100">
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white shadow-md">
+        <div class="max-w-4xl mx-auto px-4 py-6 flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-bold text-indigo-600">Math Olympiad Practice</h1>
-                <p class="text-sm text-slate-500">Loaded from <code class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">moems_all_220_problems_store.json</code></p>
+                <h1 class="text-2xl font-bold tracking-tight">MOEMS Math Olympiad</h1>
+                <p class="text-indigo-200 text-sm">Practice Problems & Instant Feedback</p>
             </div>
-            <div id="progress-badge" class="bg-indigo-50 text-indigo-700 font-semibold px-3 py-1 rounded-full text-sm">
-                Loading...
+            <div id="stats" class="text-right bg-indigo-700 px-4 py-2 rounded-lg text-sm font-medium">
+                <div>Solved: <span id="solved-count" class="font-bold text-green-300">0</span></div>
+                <div>Accuracy: <span id="accuracy-rate" class="font-bold text-yellow-300">0%</span></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-4xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+        <!-- Controls / Filter Card -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap gap-4 items-center justify-between">
+            <div class="flex items-center gap-3">
+                <label for="problem-select" class="font-semibold text-slate-700 text-sm">Select Problem:</label>
+                <select id="problem-select" class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="">Loading problems...</option>
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <button id="prev-btn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-1.5 rounded-lg text-sm font-medium transition">Previous</button>
+                <button id="next-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition">Next</button>
             </div>
         </div>
 
-        <!-- Loading / Error State -->
-        <div id="loading-state" class="text-center py-12">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent mb-3"></div>
-            <p class="text-slate-600 font-medium">Loading your 220 math problems...</p>
-        </div>
+        <!-- Problem Display Card -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
+            
+            <!-- Metadata Badge -->
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                <span id="problem-id" class="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">
+                    Problem ID
+                </span>
+                <span id="problem-division" class="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md">
+                    Division
+                </span>
+            </div>
 
-        <!-- Main Quiz Content (Hidden until loaded) -->
-        <div id="quiz-content" class="hidden">
-            <!-- Question Area -->
-            <div class="mb-6">
-                <h2 id="question-text" class="text-lg font-semibold text-slate-800 mb-4"></h2>
-                
-                <!-- Diagram / Figure Container -->
-                <div id="diagram-container" class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex justify-center items-center mb-6 min-h-[180px]">
-                    <!-- Dynamic SVG or image injected here -->
+            <!-- Question Text -->
+            <div class="text-lg leading-relaxed text-slate-800" id="question-text">
+                Select a problem to begin.
+            </div>
+
+            <!-- Diagram / Figure Container -->
+            <div id="diagram-container" class="hidden bg-slate-50 border border-slate-200 rounded-lg p-4 text-center">
+                <!-- Diagram image/SVG or placeholder will render here -->
+            </div>
+
+            <!-- Answer Form -->
+            <form id="answer-form" class="space-y-4 pt-4 border-t border-slate-100">
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input type="text" id="user-answer" placeholder="Enter your answer" class="flex-grow bg-slate-50 border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition" autocomplete="off">
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2.5 rounded-lg transition">Submit Answer</button>
                 </div>
+            </form>
+
+            <!-- Feedback Message -->
+            <div id="feedback-message" class="hidden p-4 rounded-lg text-sm font-medium"></div>
+
+            <!-- Solution / Explanation Box -->
+            <div id="solution-box" class="hidden bg-indigo-50/50 border border-indigo-100 rounded-lg p-5 space-y-3">
+                <h3 class="font-bold text-indigo-900 text-md">Solution & Explanation</h3>
+                <div id="solution-text" class="text-slate-700 text-sm leading-relaxed space-y-2"></div>
             </div>
 
-            <!-- Answer Input Area -->
-            <div class="space-y-4">
-                <div class="flex gap-2">
-                    <input type="text" id="user-answer" placeholder="Enter your answer (e.g., 1/2, 0.5, 72 cm)..." class="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg">
-                    <button id="submit-btn" onclick="checkAnswer()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-xl transition shadow-md">Submit</button>
-                </div>
-                
-                <!-- Feedback Area -->
-                <div id="feedback-area" class="hidden p-4 rounded-xl text-sm font-medium"></div>
-            </div>
-
-            <!-- Navigation Footer -->
-            <div class="mt-8 pt-4 border-t border-slate-100 flex justify-between items-center">
-                <span id="score-display" class="text-sm font-medium text-slate-600">Score: 0 / 0</span>
-                <button id="next-btn" onclick="nextQuestion()" class="hidden bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition">Next Question &rarr;</button>
-            </div>
         </div>
-    </div>
+    </main>
 
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+        MOEMS Practice App &bull; Adapted for `moems_all_220_problems_store.json`
+    </footer>
+
+    <!-- Script Logic -->
     <script>
-        let questions = [];
+        let problems = [];
         let currentIndex = 0;
-        let score = 0;
-        let answered = false;
+        let stats = { attempted: 0, correct: 0 };
 
-        // Fetch the 220 question JSON store on startup
-        async function loadQuestionsStore() {
+        async function loadData() {
             try {
                 const response = await fetch('moems_all_220_problems_store.json');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
                 const data = await response.json();
                 
-                // Handle different JSON structures (array directly or nested under an object property like { problems: [...] })
-                questions = Array.isArray(data) ? data : (data.problems || data.questions || []);
+                // Extract array from data.problems
+                problems = data.problems || [];
 
-                if (questions.length === 0) {
-                    throw new Error("No questions found in the JSON file.");
+                if (problems.length === 0) {
+                    document.getElementById('question-text').textContent = 'No problems found in JSON file.';
+                    return;
                 }
 
-                // Hide loading spinner and show quiz interface
-                document.getElementById("loading-state").classList.add("hidden");
-                document.getElementById("quiz-content").classList.remove("hidden");
-                
-                loadQuestion();
+                populateDropdown();
+                loadQuestion(0);
             } catch (error) {
-                console.error("Failed to load question store:", error);
-                document.getElementById("loading-state").innerHTML = `
-                    <div class="text-rose-600 font-semibold mb-2">⚠️ Could not load question store</div>
-                    <p class="text-sm text-slate-500 mb-4">Please ensure <code class="bg-slate-100 px-1 py-0.5 rounded">moems_all_220_problems_store.json</code> is in the same directory as this file, or check your server configuration.</p>
-                    <button onclick="loadQuestionsStore()" class="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium">Retry</button>
-                `;
+                console.error('Error loading problems:', error);
+                document.getElementById('question-text').textContent = 'Error loading JSON file. Please ensure moems_all_220_problems_store.json is in the same folder.';
             }
         }
 
-        function loadQuestion() {
-            answered = false;
-            const q = questions[currentIndex];
-            document.getElementById("progress-badge").textContent = `Question ${currentIndex + 1} of ${questions.length}`;
-            document.getElementById("question-text").textContent = q.text || q.question;
-            
-            // Render diagram if present in JSON schema, otherwise show a clean placeholder or hidden state
-            const diagramContainer = document.getElementById("diagram-container");
-            if (q.diagram) {
+        function populateDropdown() {
+            const select = document.getElementById('problem-select');
+            select.innerHTML = '';
+            problems.forEach((p, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = `Problem ${p.id || idx + 1} (${p.division || 'MOEMS'})`;
+                select.appendChild(opt);
+            });
+        }
+
+        function renderMath() {
+            if (window.renderMathInElement) {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\(', right: '\)', display: false},
+                        {left: '\[', right: '\]', display: true}
+                    ],
+                    throwOnError: false
+                });
+            }
+        }
+
+        function loadQuestion(index) {
+            if (index < 0 || index >= problems.length) return;
+            currentIndex = index;
+
+            const q = problems[currentIndex];
+
+            // Update Metadata
+            document.getElementById('problem-id').textContent = `Problem ${q.id || (currentIndex + 1)}`;
+            document.getElementById('problem-division').textContent = q.division ? `Division ${q.division}` : 'MOEMS Practice';
+            document.getElementById('problem-select').value = currentIndex;
+
+            // Update Question Text (Schema: q.content.problem_text_latex)
+            const questionText = q.content?.problem_text_latex || q.text || q.question || "No problem text available.";
+            document.getElementById('question-text').textContent = questionText;
+
+            // Diagram / Figure Handling (Schema: q.content.has_figure)
+            const diagramContainer = document.getElementById('diagram-container');
+            if (q.content?.has_figure) {
+                diagramContainer.innerHTML = `<span class="text-indigo-600 text-sm font-medium">⚠️ This problem references a figure or diagram.</span>`;
+                diagramContainer.classList.remove('hidden');
+            } else if (q.diagram) {
                 diagramContainer.innerHTML = q.diagram;
-                diagramContainer.classList.remove("hidden");
+                diagramContainer.classList.remove('hidden');
             } else {
-                diagramContainer.innerHTML = `<span class="text-slate-400 text-sm">No diagram for this question</span>`;
+                diagramContainer.classList.add('hidden');
             }
+
+            // Reset Input, Feedback, and Solution
+            document.getElementById('user-answer').value = '';
+            document.getElementById('feedback-message').className = 'hidden p-4 rounded-lg text-sm font-medium';
+            document.getElementById('solution-box').classList.add('hidden');
+
+            // Render LaTeX math
+            setTimeout(renderMath, 50);
+        }
+
+        function checkAnswer(e) {
+            e.preventDefault();
+            const userAns = document.getElementById('user-answer').value.trim();
+            if (!userAns) return;
+
+            const q = problems[currentIndex];
+
+            // Retrieve answer from solution_data.final_answer or fallback fields
+            const correctAnswer = q.solution_data?.final_answer || q.acceptedAnswers || q.answer;
             
-            const input = document.getElementById("user-answer");
-            input.value = "";
-            input.disabled = false;
-            input.focus();
+            const isCorrect = String(userAns).toLowerCase() === String(correctAnswer).toLowerCase();
 
-            const feedback = document.getElementById("feedback-area");
-            feedback.className = "hidden p-4 rounded-xl text-sm font-medium";
-            feedback.textContent = "";
-
-            document.getElementById("submit-btn").textContent = "Submit";
-            document.getElementById("next-btn").classList.add("hidden");
-        }
-
-        function parseFraction(str) {
-            if (str.includes('/')) {
-                const parts = str.split('/');
-                if (parts.length === 2) {
-                    const num = parseFloat(parts[0]);
-                    const den = parseFloat(parts[1]);
-                    if (!isNaN(num) && !isNaN(den) && den !== 0) {
-                        return num / den;
-                    }
-                }
-            }
-            return null;
-        }
-
-        function cleanAndEvaluateInput(rawInput) {
-            let cleaned = rawInput.trim().toLowerCase();
-            const q = questions[currentIndex];
-            const accepted = q.acceptedAnswers || q.accepted_answers || [String(q.answer)];
-
-            if (accepted.map(a => String(a).toLowerCase()).includes(cleaned)) {
-                return true;
-            }
-
-            const fractionVal = parseFraction(cleaned);
-            const targetVal = q.numericValue !== undefined ? q.numericValue : parseFloat(q.answer);
-
-            if (fractionVal !== null && !isNaN(targetVal)) {
-                return Math.abs(fractionVal - targetVal) <= (q.tolerance || 0.01);
-            }
-
-            const numericStr = cleaned.replace(/[^0-9.\-]/g, '');
-            const val = parseFloat(numericStr);
-            if (!isNaN(val) && !isNaN(targetVal)) {
-                return Math.abs(val - targetVal) <= (q.tolerance || 0.01);
-            }
-
-            return false;
-        }
-
-        function checkAnswer() {
-            if (answered) return;
-            const inputVal = document.getElementById("user-answer").value;
-            if (!inputVal.trim()) {
-                alert("Please enter an answer!");
-                return;
-            }
-
-            answered = true;
-            const isCorrect = cleanAndEvaluateInput(inputVal);
-            const feedback = document.getElementById("feedback-area");
-            feedback.classList.remove("hidden");
-
-            const q = questions[currentIndex];
-            const accepted = q.acceptedAnswers || q.accepted_answers || [q.answer];
-            const explanation = q.explanation || "No explanation provided.";
+            // Feedback Display
+            const feedbackEl = document.getElementById('feedback-message');
+            feedbackEl.classList.remove('hidden');
 
             if (isCorrect) {
-                score++;
-                feedback.className = "p-4 rounded-xl text-sm font-medium bg-emerald-50 text-emerald-800 border border-emerald-200";
-                feedback.innerHTML = `<strong>Correct! 🎉</strong> ${explanation}`;
+                feedbackEl.className = 'p-4 rounded-lg text-sm font-medium bg-green-100 text-green-800 border border-green-200';
+                feedbackEl.innerHTML = `<strong>Correct!</strong> Great job. The answer is indeed ${correctAnswer}.`;
+                stats.correct++;
             } else {
-                feedback.className = "p-4 rounded-xl text-sm font-medium bg-rose-50 text-rose-800 border border-rose-200";
-                feedback.innerHTML = `<strong>Incorrect.</strong> Accepted answers include: <em>${Array.isArray(accepted) ? accepted.join(", ") : accepted}</em>.<br>${explanation}`;
+                feedbackEl.className = 'p-4 rounded-lg text-sm font-medium bg-red-100 text-red-800 border border-red-200';
+                feedbackEl.innerHTML = `<strong>Incorrect.</strong> Give it another try or check the explanation below.`;
             }
 
-            document.getElementById("user-answer").disabled = true;
-            document.getElementById("score-display").textContent = `Score: ${score} / ${questions.length}`;
+            stats.attempted++;
+            updateStats();
+
+            // Display Explanation (Schema: q.solution_data.methods[0].strategy_description)
+            const solutionBox = document.getElementById('solution-box');
+            const solutionText = document.getElementById('solution-text');
             
-            if (currentIndex < questions.length - 1) {
-                document.getElementById("next-btn").classList.remove("hidden");
-                document.getElementById("submit-btn").textContent = "Answered";
+            let explanationContent = '';
+            if (q.solution_data?.methods && q.solution_data.methods.length > 0) {
+                explanationContent = q.solution_data.methods.map((method, idx) => `
+                    <div class="${idx > 0 ? 'mt-3 pt-3 border-t border-indigo-100' : ''}">
+                        <div class="font-semibold text-indigo-800">${method.name || 'Solution Method ' + (idx + 1)}</div>
+                        <p>${method.strategy_description || ''}</p>
+                    </div>
+                `).join('');
+            } else if (q.explanation) {
+                explanationContent = `<p>${q.explanation}</p>`;
             } else {
-                document.getElementById("submit-btn").textContent = "Complete!";
-                document.getElementById("feedback-area").innerHTML += `<br><br><strong>Quiz Finished! Final Score: ${score} / ${questions.length}</strong>`;
+                explanationContent = `<p>Final Answer: <strong>${correctAnswer}</strong></p>`;
             }
+
+            solutionText.innerHTML = explanationContent;
+            solutionBox.classList.remove('hidden');
+
+            setTimeout(renderMath, 50);
         }
 
-        function nextQuestion() {
-            currentIndex++;
-            if (currentIndex < questions.length) {
-                loadQuestion();
-            }
+        function updateStats() {
+            document.getElementById('solved-count').textContent = stats.correct;
+            const rate = stats.attempted > 0 ? Math.round((stats.correct / stats.attempted) * 100) : 0;
+            document.getElementById('accuracy-rate').textContent = `${rate}%`;
         }
 
-        // Initialize by loading the JSON store file
-        loadQuestionsStore();
+        // Event Listeners
+        document.getElementById('problem-select').addEventListener('change', (e) => loadQuestion(parseInt(e.target.value)));
+        document.getElementById('prev-btn').addEventListener('click', () => loadQuestion(currentIndex - 1));
+        document.getElementById('next-btn').addEventListener('click', () => loadQuestion(currentIndex + 1));
+        document.getElementById('answer-form').addEventListener('submit', checkAnswer);
 
-        document.getElementById("user-answer").addEventListener("keypress", function(e) {
-            if (e.key === 'Enter') {
-                checkAnswer();
-            }
-        });
+        // Initial Load
+        window.addEventListener('DOMContentLoaded', loadData);
     </script>
 </body>
 </html>
